@@ -44,9 +44,9 @@ A Kenyan entrepreneur has created an online cryptography course and would want t
   
  -  Bivariate Analysis
  
- -  Modelling
+3.Modelling
  
-3.Conclusions and Recommendations
+4.Conclusions and Recommendations
 
 # Data Relevance
 
