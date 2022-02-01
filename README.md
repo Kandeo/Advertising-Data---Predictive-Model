@@ -30,7 +30,7 @@ The task is to Perform clustering stating insights drawn from the analysis and v
 No Known Bugs
 
 ## Technologies Used
-Jupyter Notebook
+Html document
 
 ## Support and contact details
 To make a contribution to the code or any part of the project, 
