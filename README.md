@@ -24,7 +24,7 @@ Kira Plastinina is a Russian brand that is sold through a defunct chain of retai
 
 The brand’s Sales and Marketing team would like to understand their customer’s behavior from data that they have collected over the past year. More specifically, they would like to learn the characteristics of customer groups.
 
-The task is toPerform clustering stating insights drawn from the analysis and visualizations.
+The task is to Perform clustering stating insights drawn from the analysis and visualizations.
 
 ## Known Bugs
 No Known Bugs
