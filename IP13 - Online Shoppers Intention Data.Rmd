@@ -1,0 +1,702 @@
+---
+title: "Independent Week 13"
+author: "Christine Kandeo"
+date: "1/31/2022"
+output: html_document
+---
+
+# DEFINING THE QUESTION
+
+# Specific Data Analytics Question
+
+Analyzing Customer Intention based on online transactions in a one year duration and Clustering the groups to identify which customers are more likely to generate revenue.
+
+# Metrics for Success
+
+Building a model that accurately groups whether a shopper is a paying customer based on the available features.
+
+# Understanding the Context
+
+Kira Plastinina is a Russian brand that is sold through a defunct chain of retail stores in Russia, Ukraine, Kazakhstan, Belarus, China, Philippines, and Armenia. The brand’s Sales and Marketing team would like to understand their customer’s behavior from data that they have collected over the past year. More specifically, they would like to learn the characteristics of customer groups.
+
+# Experimental Design.
+
+1.Data Preparation
+
+ -  Loading the dataset
+ 
+ -  Data Uniformity
+ 
+ -  Handling Missing/Duplicate Values
+ 
+ -  Checking Outliers
+ 
+2.Exploratory Data Analysis
+
+ -  Univariate Analysis
+  
+ -  Bivariate Analysis
+ 
+3.Modelling
+ 
+4.Conclusions and Recommendations
+
+# Data Relevance
+
+ -  Administrative, Administrative Duration, Informational, Informational Duration, Product Related and Product Related Duration  -  Number of different types of pages visited by the visitor in that session and total time spent in each of these page categories
+
+ -  Bounce Rate - Percentage of visitors who enter the site from the page then leave ("bounce") without triggering any other requests to the analytics server during that session
+
+ -  Exit Rate  - Percentage that were the last in the session
+
+ -  Page Value - Average value for a web page that a user visited before completing an e-commerce transaction
+
+ -  Special Day  - Closeness of the site visiting time to a specific special day (e.g. Mother’s Day, Valentine's Day) in which the sessions are more likely to be finalized with transaction
+
+ -  Month  - Month of the year
+
+ -  Operating system,browser, region, traffic type  - Different types of operating systems, browser, region and traffic type used to visit the website
+
+ -  Visitor type - Whether the customer is returning or a new visitor
+
+ -  Weekend  - Boolean value indicating whether the date of the visit is weekend
+
+ -  Revenue  - Class whether it can make a revenue or not. {Class Label}
+ 
+ 
+# 1. Data Preparation
+
+Loading Libraries
+``` {r}
+#Loading dependencies: 
+library(tidyverse)
+library(scales)
+library(psych)
+library(mlr)
+library(grid)
+library(ggplot2)
+library(gridExtra)
+library(crosstable)
+library(GGally)
+
+
+#For visualization:
+library(ggcorrplot)
+
+
+#For copying the data:
+library(data.table)
+
+#For Label Encoding
+library(superml)
+
+#For Clustering:
+library(factoextra)
+library("ggdendro")
+library(flashClust)
+library(caret)
+```
+
+
+Loading the Dataset
+```{r}
+#Importing the data to the Global Environment:
+Online <- read.csv("http://bit.ly/EcommerceCustomersDataset", header = TRUE, sep = ",")
+
+#Printing the first 4 rows of the dataframe
+head(Online, n=4)
+
+```
+
+```{r}
+#Checking the Number of Rows and Columns:
+dim(Online)
+
+```
+The Dataset is made up of 12,330 Rows and 18 Columns
+
+
+Data Uniformity
+```{r}
+#Getting Information on the data types on each respective column:
+sapply(Online, class)
+
+```
+
+```{r}
+#Viewing the full information:
+str(Online)
+
+```
+
+
+Missing Values
+```{r}
+#Checking for null entries in each column:
+colSums(is.na(Online))
+
+#For the entire data set: 
+sum(is.na(Online))
+
+```
+The dataset has 112 missing values
+
+Since this samples represents a small portion of the total dataset, the missing observations are dropped.
+
+
+Handling Missing Values
+```{r}
+#Dropping the missing values in the first 8 columns:
+Online <- na.omit(Online)
+
+#Confirming that the missing values have been dropped:
+sum(is.na(Online))
+
+```
+
+
+Duplicate values
+```{r}
+#Checking for identical entries:
+sum(duplicated(Online))
+
+```
+The dataset has 117 identical entries
+
+
+Handling Duplicate Values
+```{r}
+#Dropping the duplicated entries:
+Online <- Online[!duplicated(Online), ]
+
+#Alternatively:
+#Online = distinct(Online)
+
+#Confirming the duplicates have been dropped:
+any(duplicated(Online))
+
+```
+
+
+Checking for Outliers
+```{r}
+#Using a Box plot to check for outliers on the numerical variables:
+
+#1. Integer columns: Administrative, Informational, Product Related, Operating system, Browser, Region and Traffic Type: 
+qplot( x =  Administrative, y = "", geom = "boxplot", data = Online, col = I("coral2"), fill = I("darksalmon"), main = "Administrative ")
+qplot( x =  Informational, y = "", geom = "boxplot", data = Online, col = I("coral2"), fill = I("darksalmon"), main = "Informational")
+qplot( x =  ProductRelated, y = "", geom = "boxplot", data = Online ,col = I("coral2"), fill = I("darksalmon"), main = "Product Related")
+qplot( x =  OperatingSystems, y = "", geom = "boxplot", data = Online, col = I("coral2"), fill = I("darksalmon"), main = "Operating Systems")
+qplot( x =  Browser, y = "", geom = "boxplot", data = Online, col = I("coral2"), fill = I("darksalmon"), main = "Browser")
+qplot( x =  Region, y = "", geom = "boxplot", data = Online ,col = I("coral2"), fill = I("darksalmon"), main = "Region")
+qplot( x = TrafficType,  y = "", geom = "boxplot", data = Online ,col = I("coral2"), fill = I("darksalmon"), main = "Traffic Type")
+
+```
+
+```{r}
+#2. Numeric columns: Administrative Duration, Informational Duration, Product Related Duration, Bounce Rates, Exit Rates, Page Values and Special Day: 
+qplot( x =  Administrative_Duration, y = "", geom = "boxplot", data = Online, col = I("coral2"), fill = I("darksalmon"), main = "Administrative Duration ")
+qplot( x =  Informational_Duration, y = "", geom = "boxplot", data = Online, col = I("coral2"), fill = I("darksalmon"), main = "Informational Duration")
+qplot( x =  ProductRelated_Duration, y = "", geom = "boxplot", data = Online ,col = I("coral2"), fill = I("darksalmon"), main = "Product Related Duration")
+qplot( x =  BounceRates, y = "", geom = "boxplot", data = Online, col = I("coral2"), fill = I("darksalmon"), main = "Bounce Rates")
+qplot( x =  ExitRates, y = "", geom = "boxplot", data = Online, col = I("coral2"), fill = I("darksalmon"), main = "Exit Rates")
+qplot( x =  PageValues, y = "", geom = "boxplot", data = Online ,col = I("coral2"), fill = I("darksalmon"), main = "Page Values")
+qplot( x = SpecialDay,  y = "", geom = "boxplot", data = Online ,col = I("coral2"), fill = I("darksalmon"), main = "Special Day")
+
+
+```
+
+
+From the Plots above:
+
+Outliers can be observed in all the Continuous Variables. Since there's no basis to assume the entries are not valid observations, no outliers are dropped.
+
+
+
+# 2. Exploratory Data Analysis
+
+This process involves investigating the dataset to discover patterns.
+
+# Univariate Analysis
+
+This analysis aims to explore each variable in the dataset separately
+
+ - Revenue Distribution
+
+```{r}
+#To view the distribution of Revenue:
+Rev_table <- table(Online$Revenue)
+Rev_table
+
+```
+
+```{r}
+#Plotting the Information above on a bar chart:
+barplot(Rev_table,
+main = "Revenue Distribution",
+xlab = "Revenue",
+ylab = "Frequency",
+names.arg = c("False", "True"),
+col = c("darksalmon", "chocolate"),
+horiz = FALSE)
+
+```
+ 
+Of the 12,199 sessions, 10,291  were negative class samples: Those that did not end with shopping. 1,908 were the only positive samples: Those that ended with shopping.
+ 
+This shows an imbalance within the target variable.
+ 
+It can also be said that the site did not generate expected revenue.
+
+
+
+ - Days with Frequent Activities
+ 
+```{r}
+#To view the Type of day most sessions were logged:
+Weekend_table <- table(Online$Weekend)
+Weekend_table
+
+```
+
+```{r}
+#Plotting the Information above:
+x <- c(76.59, 23.41)
+labels <- c('False', 'True')
+colors <- c('darksalmon','cornsilk2')
+#pie_percent<- round(100*x/sum(x), 0) 
+pie(x, labels = percent(x/100), main=' Type of Day', density=30, col=colors)
+legend("topright", c("Weekday", "Weekend"), cex = 0.9, fill = colors)
+
+```
+
+77% of the activities were done over the weekday. This can be justified with the fact that Weekdays have a 5 day period. 
+
+
+ - Type of Visitor
+ 
+```{r}
+#To view the type of visitors visiting the site:
+Visitor_table <- table(Online$VisitorType)
+Visitor_table
+
+```
+
+```{r}
+
+#Plotting the Information above on a bar chart:
+barplot(Visitor_table,
+main = "Type of Visitor",
+xlab = "Frequency",
+ylab = "Type of Visitor",
+names.arg = c("New Visitor", "Other", "Returning Visitor"),
+col = c("coral3", "coral", "darksalmon"),
+horiz = TRUE)
+
+```
+The vast majority of the visitors were Returning customers.
+
+
+- Month Distribution
+
+```{r}
+#To view the monthly distribution:
+Month_table <- table(Online$Month)
+Month_table
+
+```
+
+
+```{r}
+#Plotting the Information above on a bar chart:
+barplot(Month_table,
+main = "Monthly Distribution",
+xlab = "Month",
+ylab = "Frequency",
+names.arg = c("Aug", "Dec", "Feb", "Jul", "June", "Mar", "May", "Nov", "Oct", "Sep"),
+col = c("chocolate", "chocolate1", "chocolate2", "chocolate3", "chocolate4", "coral", "coral1", "coral2", "coral3", "coral4"),
+horiz = FALSE)
+
+```
+- The month column only has 10 months represented. January and April are missing.
+
+- May and November are the months with the most User activities.  
+
+- [Online Sales](https://www.salecycle.com/blog/stats/when-are-people-most-likely-to-buy-online/) in the Month of November are considered to be the highest due to Black Friday and the Holiday seasons.
+
+
+ - Numerical Features
+ 
+```{r}
+#Plotting a histogram to understand the distribution of the continuous features:
+#The features plotted below are Numeric but actually represent categories:
+ggplot(data = Online, mapping = aes(x = OperatingSystems)) + 
+  geom_histogram(fill = "darksalmon", color = "black", binwidth = 1) + labs(x = "Operating Systems", title = "Preferred Operating System")
+ggplot(data = Online, mapping = aes(x = Browser)) + 
+  geom_histogram(fill = "darksalmon", color = "black", binwidth = 1) + labs(x = "Browser", title = "Browser Types")
+ggplot(data = Online, mapping = aes(x = Region)) + 
+  geom_histogram(fill = "darksalmon", color = "black", binwidth = 1) + labs(x = "Regions", title = "Site Visitors By Regions")
+ggplot(data = Online, mapping = aes(x = TrafficType)) + 
+  geom_histogram(fill = "darksalmon", color = "black", binwidth = 1) + labs(x = "Traffic Type", title = "Distribution of Traffic Type")
+
+
+```
+
+- Operating System: Majority of the visitors used the 2nd Operating System to visit the Website.
+
+- Browser: The 2nd Browser was popular across the visitors accessing the Website. 
+
+- Regions: Region 1 followed by Region 3 had the most number of visitors entering the Site.
+
+- Traffic Type: The 2nd Type of Traffic was the most popular with the visitors. 
+
+
+It can be observed that the distributions are all right skewed.
+
+
+```{r}
+#Plotting a histogram to understand the distribution of the other continuous features:
+ggplot(data = Online, mapping = aes(x = BounceRates)) + 
+  geom_histogram(fill = "darksalmon", color = "black", binwidth = 0.005) + labs(x = " Bounce Rates (%)", title = "% of Visitors Entering  and Leaving the Site with No Activity")
+ggplot(data = Online, mapping = aes(x = ExitRates)) + 
+  geom_histogram(fill = "darksalmon", color = "black", binwidth = 0.005) + labs(x = "Exit Rate (%)", title = "% of Visitors Last in the Session")
+ggplot(data = Online, mapping = aes(x = PageValues)) + 
+  geom_histogram(fill = "darksalmon", color = "black", binwidth = 10) + labs(x = "Page Value", title = "Average Value for a Web Page")
+ggplot(data = Online, mapping = aes(x = SpecialDay)) + 
+  geom_histogram(fill = "darksalmon", color = "black", binwidth = 0.1) + labs(x = "Special Days", title = "Specific Special Days")
+
+```
+
+- Bounce Rates: Majority of the visitors who entered the site from that page and left without any requests were between 0.00-0.05%
+
+- Exit Rates: Those visitors that were last in the session ranged between 0.00-0.05%
+
+- Page Values: The average value for a web page common among most of the users visited before completing a transaction was 0
+
+- Special Days: The closeness of the site visiting time to a specific special day for the visitors was 0.
+
+
+ - Types Of Pages
+
+```{r}
+#Plotting a histogram to understand the Different types of pages:
+ggplot(data = Online, mapping = aes(x = Administrative)) + 
+  geom_histogram(fill = "darksalmon", color = "black", binwidth = 1) + labs(x = "Administrative", title = "Distribution of Administrative Pages")
+ggplot(data = Online, mapping = aes(x = Informational)) + 
+  geom_histogram(fill = "darksalmon", color = "black", binwidth = 1) + labs(x = "Informational", title = "Distribution of Informational Pages")
+ggplot(data = Online, mapping = aes(x = ProductRelated)) + 
+  geom_histogram(fill = "darksalmon", color = "black", binwidth = 10) + labs(x = "Product Related", title = "Distribution of Product Related Pages")
+
+```
+
+- Administrative: 5,637 users did not visit administrative pages.
+
+- Informational: 9,569 users did not access any Informational page.
+
+- Product related: 35 users did not access any Product related page. This is lower compared to the other 2 pages.
+
+It can therefore be concluded that the vast majority visited Product related pages.
+ 
+ 
+ - Total Time spent on the Pages
+ 
+```{r}
+#Plotting a histogram to understand the Time spent on the Different types of pages:
+ggplot(data = Online, mapping = aes(x = Administrative_Duration)) + 
+  geom_histogram(fill = "darksalmon", color = "black", binwidth = 100) + labs(x = "Administrative Duration", title = "Duration on Administrative Pages")
+ggplot(data = Online, mapping = aes(x = Informational_Duration)) + 
+  geom_histogram(fill = "darksalmon", color = "black", binwidth = 100) + labs(x = "Informational", title = "Duration on Informational Pages")
+ggplot(data = Online, mapping = aes(x = ProductRelated_Duration)) + 
+  geom_histogram(fill = "darksalmon", color = "black", binwidth = 1000) + labs(x = "Product Related", title = "Duration on Product Related Pages")
+
+
+```
+
+
+```{r}
+#Printing the Descriptive Summary to understand the durations spent:
+summary(Online)
+```
+
+Observations:
+
+- Administrative Duration: The average amount of time spent on administrative pages was 82 with the maximum being 3399
+
+- Informational Duration: The average amount of time spent on informational pages was 35 with the maximum being 2549
+
+- Product Related Duration: The average amount of time spent on Product related pages was 1207 with the maximum being 63974
+
+- The mean value in most categories is a lot smaller than the max value, suggesting strongly right skewed distributions of values in each category.
+
+
+It can be observed that most visitors spent time on Product related pages as compared to Informational and Administrative.
+ 
+The Minimum duration on Both informational and Administrative was -1. In real sense, there can be no negative time. 
+ 
+ 
+# Bivariate Analysis
+ 
+ This analysis involves two variables being observed against each other.
+ 
+ - Correlation Matrix
+ 
+```{r}
+#Creating a dataframe Cr:
+Cr<- Online
+
+#Converting Month and Visitor Type to Numerical:
+Cr$Month<- as.numeric(Cr$Month)
+Cr$VisitorType<- as.numeric(Cr$VisitorType)
+Cr$Weekend<- as.numeric(Cr$Weekend)
+Cr$Revenue<- as.numeric(Cr$Revenue)
+
+#Visualizing the Plot
+corr_map <- ggcorr(Cr[, 1:18], method=c("everything", "pearson"), label=TRUE, hjust = .90, size = 3, layout.exp = 2)
+corr_map
+
+```
+ 
+ - There is a Strong Positive correlation of 0.9 between Exit Rate and Bounce Rate
+ 
+ - Administrative and Administrative duration have a Moderate correlation of 0.6
+ 
+ - Informational and Informational Duration have a Moderate correlation of 0.6
+ 
+ - Product Related and Product Related Duration have a Strong Positive correlation of 0.9
+ 
+ - Revenue has a Moderate correlation of 0.5 with Page value.
+ 
+The data has a presence of Mullticollinearity.
+ 
+
+This analysis seeks to further answer:
+
+
+  - Do Special Days generate the most Revenue
+
+```{r}
+#Plotting a count to understand the relationship between Special Day and Revenue:
+Online %>% ggplot() +aes(x = SpecialDay, Revenue = ..count../nrow(Online), fill = Revenue) +geom_bar() +
+  labs(title = 'Revenue on Special Days', x = 'Special Day', y = 'Frequency')
+
+```
+
+Most of the Revenue generated was on days not associated with Special days.
+
+
+- Does Region affect Revenue
+
+```{r}
+#Plotting a count to understand the relationship between Region and Revenue:
+Online %>% ggplot() +aes(x = Region, Revenue = ..count../nrow(Online), fill = Revenue) +geom_bar() +
+  labs(title = 'Revenue by Region', x = 'Type of Region', y = 'Frequency')
+
+```
+
+Region 1 with the most visitors generated the highest amount of Revenue.
+
+
+- Does Type of Traffic affect revenue
+
+```{r}
+#Plotting a count to understand the relationship between Type of Traffic and Revenue:
+Online %>% ggplot() +aes(x = TrafficType, Revenue = ..count../nrow(Online), fill = Revenue) +geom_bar() +
+  labs(title = 'Revenue by Type of Traffic', x = 'Type of Traffic', y = 'Frequency')
+
+```
+
+Traffic Type 2 with most users had the highest amount of Revenue.
+
+
+ - Which Browser Generates the Highest Revenue
+
+```{r}
+#Plotting a count to understand the relationship between Type of Browser and Revenue:
+Online %>% ggplot() +aes(x = Browser, Revenue = ..count../nrow(Online), fill = Revenue) +geom_bar() +
+  labs(title = 'Revenue based on Type of Browser', x = 'Type of Browser', y = 'Frequency')
+
+```
+
+Browser 2 has the highest amount of Revenue.
+
+
+
+- Which Month has the highest revenue collection
+ 
+```{r}
+#Plotting a count to understand the relationship Month has on Revenue collected:
+Online %>% ggplot() +aes(x = Month, Revenue = ..count../nrow(Online), fill = Revenue) +geom_bar() +
+  labs(title = 'Revenue Across the Months', x = 'Months of the Year', y = 'Frequency')
+
+
+```
+
+In as much as most users visited the site in the month of May, high shopping rates can be observed in the Months of November. This period reported the highest revenue collection as it typically correspond to the ‘shopping season’ in most parts of the world. 
+
+
+ - Which Visitors generate more Revenue
+ 
+```{r}
+#Plotting a count to understand Revenue by Type of visitor:
+Online %>% ggplot() +aes(x = VisitorType, Revenue = ..count../nrow(Online), fill = Revenue) +geom_bar() +
+  labs(title = 'Revenue By Type of Visitor', x = 'Type of Visitor', y = 'Frequency')
+
+```
+
+Most of the users were returning visitors. This visitors also have a higher probability of buying a product.
+
+
+
+ - Does it matter if people visit the website on a weekend or a weekday
+ 
+```{r}
+#Plotting a count to understand Revenue by Type of day:
+Online %>% ggplot() +aes(x = Weekend, Revenue = ..count../nrow(Online), fill = Revenue) +geom_bar() +
+  labs(title = 'Revenue By Type of Day', x = 'Weekend', y = 'Frequency')
+
+```
+Majority visit the site on the weekday, a 5 day period. The chance of buying something is high in this days.
+
+
+# Unsupervised Learning Techniques
+
+In this section, K-Means clustering and Hierarchical clustering are to be implemented
+
+```{r}
+#Creating the modelling dataframe:
+Model <- copy(Online)
+
+#Dropping unnecessary columns:
+#Since Unsupervised Learning requires no Labels, the Revenue column is dropped:
+Model = subset(Model, select = -c(Revenue) )
+
+#Viewing the Data types:
+sapply(Model, class)
+
+```
+
+# Feature Engineering
+
+1. Label Encoding
+
+```{r}
+#Encoding Categorical variables to a machine readable format:
+Encode <- select(Online,c(Month, VisitorType, Weekend))
+Dummy <- dummyVars(" ~ .", data = Encode, fullRank = T)
+New_Model <- data.frame(predict(Dummy, newdata = Encode))
+
+# Dropping columns which have already been encoded:
+Model = subset(Model, select = -c(Month, VisitorType, Weekend))
+
+#Adding the encoded variables to the dataset:
+Model <- cbind(Model,New_Model)
+
+#Previewing the dataframe:
+head(Model, n = 2)
+```
+
+2. Feature Scaling
+
+```{r}
+#Transforming the ranges to the same scale of 0 to 1 using Min Max:
+Model <- as.data.frame(sapply(Model, function(x) (x-min(x))/(max(x)-min(x))))
+
+#Previewing the dataframe:
+head(Model, n = 2)
+
+```
+
+# Model Training
+
+K-Means Clustering
+
+
+- Finding K
+
+```{r}
+# Finding the optimal number of clusters using the elbow method:
+options(repr.plot.width = 6, repr.plot.height = 5)
+fviz_nbclust(Model, kmeans, method = 'wss') + 
+  geom_vline(xintercept = 4, linetype = 3) + 
+  labs(x = 'Number of clusters', y = 'Weighted cluster (wss)')
+
+```
+The Optimal K is 4
+
+```{r}
+# Plotting the K_Mean Clusters with the Optimal K:
+New_Model <- kmeans(Model, 4) 
+
+# Previewing the number of records in each Cluster:
+New_Model$size 
+
+```
+
+The number of Clusters are 4 with sizes: 2,223, 1,113, 5,880 and 2,983
+
+
+```{r}
+#Plotting the Clusters:
+fviz_cluster(New_Model, data = Model)
+
+```
+
+
+Hierarchical clustering
+
+```{r}
+#Using the Manhattan and Average method to perform Hierarchical clustering;
+cluster <- scale(Model)
+a <- dist(as.matrix(cluster) , method = 'manhattan')
+Z <- flashClust(a, method = "average")
+ggdendrogram(Z)
+
+```
+
+
+From the output above, its hard to provide insights on the Clustering.
+
+Comparisons:
+
+ - Hierarchical clustering tends to not handle big data well compared to K Means clustering. As a general conclusion, K Mean algorithm is good for large dataset while hierarchical is good for small data.
+
+ - K Means needs the number of clusters to be pre-entered while hierarchical has no such requirement. This means Hierarchical is able to deduce the optimal number of clusters.
+
+ - K means manually divides data into exclusive subsets while hierarchical arranges it into a tree format.
+ 
+From the dataset provided, apart from the K Means requiring one to specify the number of clusters, it does not work well with noisy data and outliers.
+
+
+# Conclusions ans Recommendations
+
+From the Exploratory analysis:
+
+ - The data contained Outliers and was highly skewed.
+ 
+ - Anomalies could be detected on the duration variables. I.e: Time cannot have a negative value.
+ 
+ - Few information was provided on the Demographics of the users.
+ 
+ 
+The best predictors for Revenue Generation are:
+
+ - Type of Visitor: Returning visitors had a high probability of purchase.
+ 
+ - Month: November is the month likely to generate more revenue.
+ 
+ - Product Related Pages: The vast majority of users spent time on product related pages.
+ 
+ - Most of the Revenue generated was on days not associated with Special days.
+ 
+ - Region 1 with the most visitors generated the highest amount of Revenue.
+
+
+As a recommendation:
+ 
+ -  More Information should be collected on the Demographics of the users.
+ 
+ - To counter on the presence of outliers, data validation should be done after collection for verification purposes.
+ 
+ - The company should focus on the best predictors to improve revenue collection.
+
+
